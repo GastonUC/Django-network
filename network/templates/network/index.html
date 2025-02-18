@@ -2,4 +2,24 @@
 
 {% block body %}
     TODO
+    <main class="posts">
+        <h2>All Posts</h2>
+        <ul>
+            {% for post in posts %}
+                <li>
+                    <div>
+                        <a href="{% url 'profile' post.user.username %}">{{ post.user.username }}</a>
+                        <span>{{ post.timestamp }}</span>
+                    </div>
+                    <div>
+                        {{ post.content }}
+                    </div>
+                    <div>
+                        <a href="{% url 'like' post.id %}">Like</a>
+                        <span>{{ likes }} likes</span>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    </main>
 {% endblock %}

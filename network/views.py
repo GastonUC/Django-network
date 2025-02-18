@@ -1,8 +1,8 @@
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
-from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django import forms
 
@@ -12,11 +12,15 @@ class PostForm(forms.Form):
     content = forms.CharField(max_length=45, widget=forms.Textarea(attrs={'placeholder:': 'Write your post here!'}))
 
 def index(request):
-    return render(request, "network/index.html")
+    if request.user.is_authenticated:
+        return render(request, "network/index.html")
+    else:
+        return HttpResponseRedirect(reverse("login"))
 
 @login_required(login_url='/login')
-def post(request, start=1, end=10):
+def post_view(request):
     posts = Post.objects.all()[:10]
+    likes = Like.objects.all().filter(user=request.user)
     if request.method == "POST":
         content = request.POST["content"]
         user = request.user
@@ -25,8 +29,18 @@ def post(request, start=1, end=10):
         return HttpResponseRedirect(reverse("index"))
     else:
         return render(request, "network/index.html", {
-            "form": PostForm()
+            "form": PostForm(),
+            "posts": posts,
+            "likes": likes
         })
+    
+def list_posts(request):
+    posts = list(Post.objects.values())
+    return JsonResponse(posts, safe=False)
+
+def get_post(request, post_id):
+    post = get_object_or_404(Post, id=post_id)
+    return JsonResponse({"id": post.id, "user": post.user.id, "content": post.content, "created_at": post.timestamp})
 
 
 def login_view(request):
