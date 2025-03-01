@@ -5,21 +5,24 @@ from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django import forms
+from django.core.paginator import Paginator
 
 from .models import User, Post, Follower, Like
 
-class PostForm(forms.Form):
-    content = forms.CharField(max_length=45, widget=forms.Textarea(attrs={'placeholder:': 'Write your post here!'}))
 
 def index(request):
     if request.user.is_authenticated:
-        return render(request, "network/index.html")
+        feed = Post.objects.all()
+        p = Paginator(feed, 10)
+        return render(request, "network/index.html", {
+            "feed": p.page(1),
+            "likes": Like.objects.all().filter(user=request.user),
+        })
     else:
         return HttpResponseRedirect(reverse("login"))
 
 @login_required(login_url='/login')
 def post_view(request):
-    posts = Post.objects.all()[:10]
     likes = Like.objects.all().filter(user=request.user)
     if request.method == "POST":
         content = request.POST["content"]
@@ -29,18 +32,34 @@ def post_view(request):
         return HttpResponseRedirect(reverse("index"))
     else:
         return render(request, "network/index.html", {
-            "form": PostForm(),
-            "posts": posts,
             "likes": likes
         })
     
-def list_posts(request):
+@login_required(login_url='/login')
+def load_post():
+    feed = Post.objects.all()
+    p = Paginator(feed, 10)
     posts = list(Post.objects.values())
-    return JsonResponse(posts, safe=False)
+    return JsonResponse(posts, safe=False, status=200)
 
 def get_post(request, post_id):
     post = get_object_or_404(Post, id=post_id)
     return JsonResponse({"id": post.id, "user": post.user.id, "content": post.content, "created_at": post.timestamp})
+
+def profile(request, username):
+    return render(request, "network/profile.html", {
+        "user": User.objects.get(username=username),
+    })
+
+def create_post(request):
+    if request.method == "POST":
+        content = request.POST["content"]
+        user = request.user
+        post = Post(user=user, content=content)
+        post.save()
+        return JsonResponse({"message": "Post created successfully."})
+        # return HttpResponseRedirect(reverse("index"))
+    return render(request, "network/index.html")
 
 
 def login_view(request):

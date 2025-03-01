@@ -4,22 +4,12 @@
     TODO
     <main class="posts">
         <h2>All Posts</h2>
-        <ul>
-            {% for post in posts %}
-                <li>
-                    <div>
-                        <a href="{% url 'profile' post.user.username %}">{{ post.user.username }}</a>
-                        <span>{{ post.timestamp }}</span>
-                    </div>
-                    <div>
-                        {{ post.content }}
-                    </div>
-                    <div>
-                        <a href="{% url 'like' post.id %}">Like</a>
-                        <span>{{ likes }} likes</span>
-                    </div>
-                </li>
-            {% endfor %}
-        </ul>
+        <form id="create-post" action="{% url 'create' %}" method="post">
+            {% csrf_token %}
+            <textarea name="content" id="post-content" placeholder="What's on your mind?"></textarea>
+            <button id="submit-post" type="submit">Post</button>
+        </form>
+        <div id="posts">
+        </div>
     </main>
 {% endblock %}
