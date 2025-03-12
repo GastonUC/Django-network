@@ -34,22 +34,6 @@ def post_view(request):
         return render(request, "network/index.html", {
             "likes": likes
         })
-    
-@login_required(login_url='/login')
-def load_post():
-    feed = Post.objects.all()
-    p = Paginator(feed, 10)
-    posts = list(Post.objects.values())
-    return JsonResponse(posts, safe=False, status=200)
-
-def get_post(request, post_id):
-    post = get_object_or_404(Post, id=post_id)
-    return JsonResponse({"id": post.id, "user": post.user.id, "content": post.content, "created_at": post.timestamp})
-
-def profile(request, username):
-    return render(request, "network/profile.html", {
-        "user": User.objects.get(username=username),
-    })
 
 def create_post(request):
     if request.method == "POST":
@@ -57,10 +41,37 @@ def create_post(request):
         user = request.user
         post = Post(user=user, content=content)
         post.save()
-        return JsonResponse({"message": "Post created successfully."})
+        return JsonResponse({"message": "Post created successfully."}, status=201)
         # return HttpResponseRedirect(reverse("index"))
     return render(request, "network/index.html")
 
+@login_required(login_url='/login')
+def feed(request):
+    feed = Post.objects.all()
+    p = Paginator(feed, 10)
+    # return JsonResponse(list(p.page(1)), safe=False, status=200)
+    return render(request, "network/index.html", {
+        "feed": p.page(1),
+        "likes": Like.objects.all().filter(user=request.user)
+    })
+
+@login_required(login_url='/login')
+def following(request):
+    user = request.user
+    following = Follower.objects.all().filter(follower=user)
+    posts = []
+    for follow in following:
+        posts.append(Post.objects.all().filter(user=follow.following))
+    return JsonResponse(posts, safe=False, status=200)
+    
+def get_post(post_id):
+    post = get_object_or_404(Post, id=post_id)
+    return JsonResponse({"id": post.id, "user": post.user.id, "content": post.content, "created_at": post.timestamp})
+
+def profile(request, username):
+    return render(request, "network/profile.html", {
+        "user": User.objects.get(username=username),
+    })
 
 def login_view(request):
     if request.method == "POST":
